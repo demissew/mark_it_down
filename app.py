@@ -1,6 +1,8 @@
 import logging
 import os
 import uuid
+from pathlib import Path
+from urllib.parse import urlparse
 
 import httpx
 from fastapi import FastAPI, HTTPException
@@ -18,7 +20,9 @@ class ConvertRequest(BaseModel):
 
 @app.post("/convert")
 async def convert(req: ConvertRequest) -> dict:
-    tmp_path = os.path.join("/tmp", f"markitdown-{uuid.uuid4()}.pdf")
+    url_path = urlparse(str(req.url)).path
+    ext = Path(url_path).suffix or ".bin"
+    tmp_path = os.path.join("/tmp", f"markitdown-{uuid.uuid4()}{ext}")
     try:
         logger.info("download start url=%s tmp=%s", req.url, tmp_path)
         async with httpx.AsyncClient(follow_redirects=True, timeout=30.0) as client:
