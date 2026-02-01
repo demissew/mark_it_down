@@ -1,0 +1,12 @@
+[project]
+name = "mark-it-down"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.110",
+    "httpx>=0.26",
+    "markitdown[docx,pdf,pptx]>=0.1.0",
+    "uvicorn>=0.29",
+]
