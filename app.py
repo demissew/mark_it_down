@@ -1,4 +1,5 @@
 import logging
+import mimetypes
 import os
 import uuid
 from pathlib import Path
@@ -26,7 +27,14 @@ async def convert(req: ConvertRequest) -> dict:
     try:
         logger.info("download start url=%s tmp=%s", req.url, tmp_path)
         async with httpx.AsyncClient(follow_redirects=True, timeout=30.0) as client:
-            resp = await client.get(str(req.url))
+            try:
+                resp = await client.get(str(req.url))
+            except httpx.RequestError as exc:
+                logger.error("download error url=%s error=%s", req.url, exc)
+                raise HTTPException(
+                    status_code=502,
+                    detail="download failed: connection error",
+                ) from exc
             if resp.status_code != 200:
                 logger.error(
                     "download failed url=%s status=%s",
@@ -39,6 +47,11 @@ async def convert(req: ConvertRequest) -> dict:
                 )
             with open(tmp_path, "wb") as f:
                 f.write(resp.content)
+            mime_type = (
+                resp.headers.get("content-type") or mimetypes.guess_type(tmp_path)[0]
+            )
+            if not mime_type:
+                mime_type = "application/octet-stream"
             logger.info(
                 "download complete url=%s status=%s bytes=%s",
                 req.url,
@@ -52,7 +65,7 @@ async def convert(req: ConvertRequest) -> dict:
         logger.info(
             "convert complete tmp=%s chars=%s", tmp_path, len(result.text_content)
         )
-        return {"markdown": result.text_content}
+        return {"mime_type": mime_type, "markdown": result.text_content}
     except HTTPException:
         raise
     except Exception as exc:
